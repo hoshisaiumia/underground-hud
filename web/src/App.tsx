@@ -1,7 +1,9 @@
+import { Logo } from "./components/Logo"
+
 function App() {
   return (
     <>
-      Hello, world!
+      <Logo />
     </>
   )
 }
