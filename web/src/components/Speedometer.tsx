@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNuiEvent } from "../utils/useNuiEvent";
 import { SemiGauge } from "./ui/SemiGauge";
 import {
@@ -48,20 +48,54 @@ export function gearLabel(gear: number): string {
 
 export function Speedometer() {
   const [speedometerData, setSpeedometerData] = useState<SpeedometerData>({
-    speed: 999,
-    rpm: 1,
-    fuel: 0,
+    speed: 0,
+    rpm: 0,
+    fuel: 1.0,
     gear: 1,
     seatbelt: false,
-    engineOn: true,
+    engineOn: false,
     engineHealth: 1.0,
     lightsOn: false,
     visible: true,
   });
+  const [displayRpm, setDisplayRpm] = useState(0);
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+
+  const animRef = useRef<number>(0);
+  const IDLE_RPM = 0.2;
+  const normalizedRpm =
+    Math.max(speedometerData.rpm - IDLE_RPM, 0) / (1 - IDLE_RPM);
+
+  useEffect(() => {
+    if (normalizedRpm >= 0.97) {
+      let t = 0;
+      const animate = () => {
+        t += 0.6;
+        const noise = Math.min(
+          0.92 + Math.abs(Math.sin(t) * 0.08) + Math.random() * 0.04,
+          1,
+        );
+        setDisplayRpm(noise);
+        animRef.current = requestAnimationFrame(animate);
+      };
+      animRef.current = requestAnimationFrame(animate);
+    } else {
+      cancelAnimationFrame(animRef.current);
+      setDisplayRpm(normalizedRpm);
+    }
+
+    return () => cancelAnimationFrame(animRef.current);
+  }, [normalizedRpm]);
 
   useNuiEvent<Partial<SpeedometerData>>("updateSpeedometer", (data) => {
     setSpeedometerData((prev) => ({ ...prev, ...data }));
   });
+
+  useNuiEvent<boolean>("setSpeedometerVisibility", (data) => {
+    setIsVisible(data);
+  });
+
+  if (!isVisible) return null;
 
   return (
     <div className="absolute bottom-5 right-5 p-5 flex flex-col gap-2 w-60 items-end">
@@ -82,8 +116,9 @@ export function Speedometer() {
         <div
           className="h-full rounded transition-colors"
           style={{
-            width: `${speedometerData.rpm * 100}%`,
-            backgroundColor: rpmColor(speedometerData.rpm),
+            width: `${displayRpm * 100}%`,
+            backgroundColor: rpmColor(displayRpm),
+            transition: "width 0.03s ease-out, background-color 0.5 ease",
           }}
         ></div>
       </div>
