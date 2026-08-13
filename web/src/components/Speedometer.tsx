@@ -82,7 +82,7 @@ export function Speedometer() {
         <div
           className="h-full rounded transition-colors"
           style={{
-            width: `${(speedometerData.rpm / 1.1) * 100}%`,
+            width: `${speedometerData.rpm * 100}%`,
             backgroundColor: rpmColor(speedometerData.rpm),
           }}
         ></div>
