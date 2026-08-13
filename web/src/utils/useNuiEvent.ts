@@ -1,29 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from "react";
 
-type NuiHandlerSignature<T> = (data: T) => void;
+export function useNuiEvent<T>(action: string, handler: (data: T) => void) {
+  const stable = useCallback(handler, []);
 
-const IS_BROWSER = !(window as Window & { invokeNative?: unknown }).invokeNative;
+  useEffect(() => {
+    const listener = (event: MessageEvent) => {
+      if (event.data?.action === action) {
+        stable(event.data.data as T);
+      }
+    };
 
-export const useNuiEvent = <T>(action: string, handler: NuiHandlerSignature<T>) => {
-    useEffect(() => {
-        const eventListener = (event: MessageEvent) => {
-            const { action: eventAction, data } = event.data;
-            if (eventAction === action) {
-                handler(data as T);
-            }
-        };
-
-        window.addEventListener('message', eventListener);
-        return () => window.removeEventListener('message', eventListener);
-    }, [action, handler]);
-};
-
-export const debugNuiEvent = <T>(action: string, data: T) => {
-    if (!IS_BROWSER) return;
-
-    window.dispatchEvent(
-        new MessageEvent('message', {
-            data: { action, data },
-        })
-    );
-};
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  }, [action, stable]);
+}
